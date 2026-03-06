@@ -2077,6 +2077,9 @@ class WX859Channel(ChatChannel):
             self._process_emoji_message(cmsg)
         elif msg_type in [49, "49", "App"]:
             self._process_xml_message(cmsg)
+        elif msg_type in [10002, "10002"]:
+            # 长连接推送的系统模板消息（如进群提示）
+            self._process_system_message(cmsg)
         elif msg_type in [10000, "10000", "System"]:
             self._process_system_message(cmsg)
         else:
@@ -4857,11 +4860,9 @@ class WX859Channel(ChatChannel):
         logger.debug(f"[{self.name}] Finished _process_xml_message for {cmsg.msg_id}. Final ctype={current_ctype}, is_text_quote={processed_text_quote_status}, is_image_quote={processed_image_quote_status}")
 
     def _process_system_message(self, cmsg):
-        """处理系统消息"""
-        # 移除重复导入的ET
-        
-        # 检查是否是拍一拍消息
-        if "<pat" in cmsg.content:
+        """处理系统消息并尝试识别进群事件"""
+        # 1) 优先处理拍一拍
+        if isinstance(cmsg.content, str) and "<pat" in cmsg.content:
             try:
                 root = ET.fromstring(cmsg.content)
                 pat = root.find("pat")
@@ -4875,26 +4876,89 @@ class WX859Channel(ChatChannel):
                         "patted": patted,
                         "suffix": pat_suffix
                     }
-                    
-                    # 设置actual_user_id和actual_user_nickname
                     cmsg.sender_wxid = patter
                     cmsg.actual_user_id = patter
                     cmsg.actual_user_nickname = patter
-                    
-                    # 日志输出
                     logger.info(f"收到拍一拍消息: ID:{cmsg.msg_id} 来自:{cmsg.from_user_id} 发送人:{cmsg.sender_wxid} 拍者:{patter} 被拍:{patted} 后缀:{pat_suffix}")
                     return
             except Exception as e:
                 logger.debug(f"[WX859] 解析拍一拍消息失败: {e}")
-        
-        # 如果不是特殊系统消息，按普通系统消息处理
+
+        # 2) 默认作为系统消息
         cmsg.ctype = ContextType.SYSTEM
-        
-        # 设置系统消息的actual_user_id和actual_user_nickname为系统
         cmsg.sender_wxid = "系统消息"
         cmsg.actual_user_id = "系统消息"
         cmsg.actual_user_nickname = "系统消息"
-        
+
+        # 3) 尝试识别进群事件（sysmsgtemplate）
+        try:
+            if isinstance(cmsg.content, str) and "<sysmsg" in cmsg.content:
+                # 预处理去除多余换行和制表，增强解析鲁棒性
+                xml_text = cmsg.content.replace("\n", "").replace("\t", "")
+                root = ET.fromstring(xml_text)
+                if root.tag == "sysmsg" and (root.get("type") == "sysmsgtemplate"):
+                    sys_msg_template = root.find("sysmsgtemplate")
+                    if sys_msg_template is not None:
+                        content_template = sys_msg_template.find("content_template")
+                        if content_template is not None:
+                            template_node = content_template.find("template")
+                            template_text = template_node.text if template_node is not None else ""
+                            # 识别常见加入群聊模板
+                            join_pattern_hit = False
+                            if template_text:
+                                patterns = [
+                                    '"$names$"加入了群聊',
+                                    '"$username$"邀请"$names$"加入了群聊',
+                                    '你邀请"$names$"加入了群聊',
+                                    '"$adder$"通过扫描"$from$"分享的二维码加入群聊',
+                                    '"$adder$"通过"$from$"的邀请二维码加入群聊'
+                                ]
+                                join_pattern_hit = any(p in template_text for p in patterns)
+
+                            if join_pattern_hit:
+                                # 提取新成员
+                                new_members = []
+                                # names 链接中通常包含 memberlist
+                                names_link = root.find(".//link[@name='names']")
+                                adder_link = root.find(".//link[@name='adder']")
+                                target_link = names_link if names_link is not None else adder_link
+                                if target_link is not None:
+                                    memberlist = target_link.find("memberlist")
+                                    if memberlist is not None:
+                                        for m in memberlist.findall("member"):
+                                            username = m.findtext("username") or ""
+                                            nickname = m.findtext("nickname") or ""
+                                            if username:
+                                                new_members.append({"wxid": username, "nickname": nickname})
+
+                                # 标注到 cmsg，便于后续欢迎逻辑使用
+                                cmsg.join_event = True
+                                cmsg.new_members = new_members
+                                cmsg.join_group_id = getattr(cmsg, "from_user_id", None)  # 群ID通常在from_user_id
+                                logger.info(f"[WX859] 识别到进群事件: msg_id={cmsg.msg_id}, 群ID={cmsg.from_user_id}, 新成员数量={len(new_members)}")
+                                for nm in new_members:
+                                    logger.info(f"[WX859] 新成员: wxid={nm.get('wxid','')}, 昵称={nm.get('nickname','')}")
+                                # 同步到 cmsg.extra，便于 Context.extra 透传到插件层
+                                try:
+                                    extra = getattr(cmsg, "extra", {}) or {}
+                                    if not isinstance(extra, dict):
+                                        extra = {}
+                                except Exception:
+                                    extra = {}
+                                extra.update({
+                                    "join_event": True,
+                                    "new_members": new_members,
+                                    "join_group_id": cmsg.join_group_id,
+                                })
+                                cmsg.extra = extra
+                                # 不在此处发送；仅识别与标记，继续后续分发流程（不要提前 return）
+                                # return
+        except ET.ParseError as e_xml:
+            logger.debug(f"[WX859] 系统消息XML解析失败，可能不是进群模板: {e_xml}")
+        except Exception as e:
+            logger.debug(f"[WX859] 识别进群事件时出现异常: {e}")
+
+        # 4) 记录普通系统消息日志
         logger.info(f"收到系统消息: ID:{cmsg.msg_id} 来自:{cmsg.from_user_id} 发送人:{cmsg.sender_wxid} 内容:{cmsg.content}")
 
     def _is_likely_base64_for_log(self, s: str) -> bool:
@@ -5268,7 +5332,9 @@ class WX859Channel(ChatChannel):
         # 1. 下载视频文件
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(video_url, timeout=aiohttp.ClientTimeout(total=120)) as resp: # 增加超时到120秒
+                # 增大总超时时间，并设置每次读取的超时时间，避免大视频或网络波动导致过早超时
+                timeout = aiohttp.ClientTimeout(total=300, sock_read=60)
+                async with session.get(video_url, timeout=timeout) as resp:
                     if resp.status == 200:
                         with open(video_file_path, 'wb') as f:
                             while True:
@@ -5515,32 +5581,57 @@ class WX859Channel(ChatChannel):
                 logger.warning(f"[WX859] 发送消息可能失败: 接收者: {receiver}, 结果: {result}")
         
         elif reply.type == ReplyType.IMAGE_URL:
-            # 从网络下载图片并发送
+            # 从网络下载图片并发送（加固：超时、状态码、尺寸校验、上传重试）
             img_url = reply.content
             logger.debug(f"[WX859] 开始下载图片, url={img_url}")
+            tmp_path = None
             try:
-                pic_res = requests.get(img_url, stream=True)
+                pic_res = requests.get(img_url, stream=True, timeout=15)
+                pic_res.raise_for_status()
                 # 使用临时文件保存图片
                 tmp_path = os.path.join(get_appdata_dir(), f"tmp_img_{int(time.time())}.png")
                 with open(tmp_path, 'wb') as f:
-                    for block in pic_res.iter_content(1024):
-                        f.write(block)
-                
-                # 使用我们的自定义方法发送图片
-                result = loop.run_until_complete(self._send_image(receiver, tmp_path))
-                
-                if result and isinstance(result, dict) and result.get("Success", False):
-                    logger.info(f"[WX859] 发送图片成功: 接收者: {receiver}")
-                else:
-                    logger.warning(f"[WX859] 发送图片可能失败: 接收者: {receiver}, 结果: {result}")
-                
-                # 删除临时文件
+                    for block in pic_res.iter_content(65536):
+                        if block:
+                            f.write(block)
+                # 校验临时文件大小
                 try:
-                    os.remove(tmp_path)
-                except Exception as e:
-                    logger.debug(f"[WX859] 删除临时图片文件失败: {e}")
+                    file_size = os.path.getsize(tmp_path)
+                except Exception:
+                    file_size = -1
+                if file_size <= 0:
+                    raise Exception(f"下载图片为空或无法获取大小, url={img_url}, path={tmp_path}")
+                
+                # 使用我们的自定义方法发送图片（重试3次，指数退避）
+                max_retries = 3
+                delay = 1
+                last_result = None
+                for attempt in range(1, max_retries + 1):
+                    try:
+                        result = loop.run_until_complete(self._send_image(receiver, tmp_path))
+                        last_result = result
+                        if result and isinstance(result, dict) and result.get("Success", False):
+                            logger.info(f"[WX859] 发送图片成功: 接收者: {receiver}")
+                            break
+                        else:
+                            logger.warning(f"[WX859] 发送图片可能失败(第{attempt}/{max_retries}次): 接收者: {receiver}, 文件大小: {file_size}B, 结果: {result}")
+                    except Exception as ex:
+                        logger.warning(f"[WX859] 发送图片异常(第{attempt}/{max_retries}次): 接收者: {receiver}, url={img_url}, 文件大小: {file_size}B, 异常: {ex}")
+                    if attempt < max_retries:
+                        time.sleep(delay)
+                        delay *= 2
+                else:
+                    # 重试结束仍失败
+                    logger.warning(f"[WX859] 发送图片可能失败: 接收者: {receiver}, 结果: {last_result}")
             except Exception as e:
                 logger.error(f"[WX859] 发送图片失败: {e}")
+            finally:
+                # 删除临时文件
+                if tmp_path:
+                    try:
+                        os.remove(tmp_path)
+                    except Exception as e:
+                        logger.debug(f"[WX859] 删除临时图片文件失败: {e}")
         
         elif reply.type == ReplyType.IMAGE: # 添加处理 ReplyType.IMAGE
             image_input = reply.content
@@ -6555,7 +6646,20 @@ class WX859Channel(ChatChannel):
         try:
             # 直接创建Context对象，确保结构正确
             context = Context()
-            context.type = ctype
+            # 透传通道层扩展字段到插件层
+            try:
+                cmsg_extra = getattr(cmsg, "extra", {}) or {}
+                if isinstance(cmsg_extra, dict):
+                    if not hasattr(context, "extra") or not isinstance(context.extra, dict):
+                        context.extra = {}
+                    context.extra.update(cmsg_extra)
+            except Exception:
+                pass
+            # 若为系统消息，确保类型一致（不再引用未定义的 cmsg）
+            if ctype == ContextType.SYSTEM:
+                context.type = ContextType.SYSTEM
+            else:
+                context.type = ctype
             context.content = content
             
             # 获取消息对象
