@@ -4,8 +4,6 @@ import os
 import mimetypes
 import threading
 import json
-
-
 import requests
 from urllib.parse import urlparse, unquote
 
@@ -125,10 +123,12 @@ class DifyBot(Bot):
     def _reply(self, query: str, session: DifySession, context: Context):
         try:
             session.count_user_message() # 限制一个conversation中消息数，防止conversation过长
-            # 使用内部状态而不是配置
-            if self.current_app_type == 'chatbot' or self.current_app_type == 'chatflow':
+            
+            # 【关键修改】使用内部状态而不是配置，强制 chatflow 走 agent 逻辑
+            if self.current_app_type == 'chatbot':
                 return self._handle_chatbot(query, session, context)
-            elif self.current_app_type == 'agent':
+            elif self.current_app_type == 'agent' or self.current_app_type == 'chatflow':
+                # 让 chatflow 也走 agent 的流式处理逻辑
                 return self._handle_agent(query, session, context)
             elif self.current_app_type == 'workflow':
                 return self._handle_workflow(query, session, context)
@@ -148,6 +148,8 @@ class DifyBot(Bot):
         response_mode = 'blocking'
         payload = self._get_payload(query, session, response_mode)
         files = self._get_upload_files(session, context)
+        
+        # 发送请求
         response = chat_client.create_chat_message(
             inputs=payload['inputs'],
             query=payload['query'],
@@ -157,38 +159,43 @@ class DifyBot(Bot):
             files=files
         )
 
+        # 【调试代码】处理非200状态码
         if response.status_code != 200:
             error_info = f"[DIFY] payload={payload} response text={response.text} status_code={response.status_code}"
             logger.warning(error_info)
+            # 打印明显的错误提示
+            print(f"\n======== DIFY API ERROR ========")
+            print(f"Status Code: {response.status_code}")
+            print(f"API Base: {api_base}")
+            print(f"Response: {response.text}")
+            print(f"================================\n")
             friendly_error_msg = self._handle_error_response(response.text, response.status_code)
             return None, friendly_error_msg
 
-        # response:
-        # {
-        #     "event": "message",
-        #     "message_id": "9da23599-e713-473b-982c-4328d4f5c78a",
-        #     "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2",
-        #     "mode": "chat",
-        #     "answer": "xxx",
-        #     "metadata": {
-        #         "usage": {
-        #         },
-        #         "retriever_resources": []
-        #     },
-        #     "created_at": 1705407629
-        # }
-        rsp_data = response.json()
+        # 【安全解析】防止JSONDecodeError
+        try:
+            rsp_data = response.json()
+        except Exception as e:
+            logger.error(f"[DIFY] Failed to parse JSON. Response: {response.text}")
+            print(f"【解析失败】Dify返回内容非JSON: {response.text}")
+            return None, "Dify服务返回异常，请联系管理员检查后台日志。"
+
         logger.debug("[DIFY] usage {}".format(rsp_data.get('metadata', {}).get('usage', 0)))
+
+        # 检查 answer 字段是否存在
+        if 'answer' not in rsp_data:
+             logger.error(f"[DIFY] Response missing 'answer' field: {rsp_data}")
+             return None, "Dify返回数据缺失 answer 字段"
 
         answer = rsp_data['answer']
         parsed_content = parse_markdown_text(answer)
 
-        # {"answer": "![image](/files/tools/dbf9cd7c-2110-4383-9ba8-50d9fd1a4815.png?timestamp=1713970391&nonce=0d5badf2e39466042113a4ba9fd9bf83&sign=OVmdCxCEuEYwc9add3YNFFdUpn4VdFKgl84Cg54iLnU=)"}
         at_prefix = ""
         channel = context.get("channel")
         is_group = context.get("isgroup", False)
         if is_group:
             at_prefix = "@" + context["msg"].actual_user_nickname + "\n"
+        
         for item in parsed_content[:-1]:
             reply = None
             if item['type'] == 'text':
@@ -211,9 +218,11 @@ class DifyBot(Bot):
             logger.debug(f"[DIFY] reply={reply}")
             if reply and channel:
                 channel.send(reply, context)
+        
         # parsed_content 没有数据时，直接不回复
         if not parsed_content:
             return None, None
+            
         final_item = parsed_content[-1]
         final_reply = None
         if final_item['type'] == 'text':
@@ -259,7 +268,7 @@ class DifyBot(Bot):
             return file_path
         except Exception as e:
             logger.error(f"Error downloading {url}: {e}")
-        return None
+            return None
 
     def _download_image(self, url):
         try:
@@ -296,16 +305,20 @@ class DifyBot(Bot):
         if response.status_code != 200:
             error_info = f"[DIFY] payload={payload} response text={response.text} status_code={response.status_code}"
             logger.warning(error_info)
+            print(f"\n======== DIFY AGENT ERROR ========")
+            print(f"Status Code: {response.status_code}")
+            print(f"Response: {response.text}")
+            print(f"================================\n")
             friendly_error_msg = self._handle_error_response(response.text, response.status_code)
             return None, friendly_error_msg
-        # response:
-        # data: {"event": "agent_thought", "id": "8dcf3648-fbad-407a-85dd-73a6f43aeb9f", "task_id": "9cf1ddd7-f94b-459b-b942-b77b26c59e9b", "message_id": "1fb10045-55fd-4040-99e6-d048d07cbad3", "position": 1, "thought": "", "observation": "", "tool": "", "tool_input": "", "created_at": 1705639511, "message_files": [], "conversation_id": "c216c595-2d89-438c-b33c-aae5ddddd142"}
-        # data: {"event": "agent_thought", "id": "8dcf3648-fbad-407a-85dd-73a6f43aeb9f", "task_id": "9cf1ddd7-f94b-459b-b942-b77b26c59e9b", "message_id": "1fb10045-55fd-4040-99e6-d048d07cbad3", "position": 1, "thought": "", "observation": "", "tool": "dalle3", "tool_input": "{\"dalle3\": {\"prompt\": \"cute Japanese anime girl with white hair, blue eyes, bunny girl suit\"}}", "created_at": 1705639511, "message_files": [], "conversation_id": "c216c595-2d89-438c-b33c-aae5ddddd142"}
-        # data: {"event": "agent_message", "id": "1fb10045-55fd-4040-99e6-d048d07cbad3", "task_id": "9cf1ddd7-f94b-459b-b942-b77b26c59e9b", "message_id": "1fb10045-55fd-4040-99e6-d048d07cbad3", "answer": "I have created an image of a cute Japanese", "created_at": 1705639511, "conversation_id": "c216c595-2d89-438c-b33c-aae5ddddd142"}
-        # data: {"event": "message_end", "task_id": "9cf1ddd7-f94b-459b-b942-b77b26c59e9b", "id": "1fb10045-55fd-4040-99e6-d048d07cbad3", "message_id": "1fb10045-55fd-4040-99e6-d048d07cbad3", "conversation_id": "c216c595-2d89-438c-b33c-aae5ddddd142", "metadata": {"usage": {"prompt_tokens": 305, "prompt_unit_price": "0.001", "prompt_price_unit": "0.001", "prompt_price": "0.0003050", "completion_tokens": 97, "completion_unit_price": "0.002", "completion_price_unit": "0.001", "completion_price": "0.0001940", "total_tokens": 184, "total_price": "0.0002290", "currency": "USD", "latency": 1.771092874929309}}}
-        msgs, conversation_id = self._handle_sse_response(response)
+        
+        try:
+            msgs, conversation_id = self._handle_sse_response(response)
+        except Exception as e:
+            logger.error(f"[DIFY] Failed to handle SSE response: {e}")
+            return None, "流式响应解析失败"
+
         channel = context.get("channel")
-        # TODO: 适配除微信以外的其他channel
         is_group = context.get("isgroup", False)
         for msg in msgs[:-1]:
             if msg['type'] == 'agent_message':
@@ -319,6 +332,10 @@ class DifyBot(Bot):
                 reply = Reply(ReplyType.IMAGE_URL, url)
                 thread = threading.Thread(target=channel.send, args=(reply, context))
                 thread.start()
+        
+        if not msgs:
+            return None, None
+
         final_msg = msgs[-1]
         reply = None
         if final_msg['type'] == 'agent_message':
@@ -326,7 +343,7 @@ class DifyBot(Bot):
         elif final_msg['type'] == 'message_file':
             url = self._fill_file_base_url(final_msg['content']['url'])
             reply = Reply(ReplyType.IMAGE_URL, url)
-        # 设置dify conversation_id, 依靠dify管理上下文
+        
         if session.get_conversation_id() == '':
             session.set_conversation_id(conversation_id)
         return reply, None
@@ -337,32 +354,23 @@ class DifyBot(Bot):
         api_base = self.api_base
         dify_client = DifyClient(api_key, api_base)
         response = dify_client._send_request("POST", "/workflows/run", json=payload)
+        
         if response.status_code != 200:
             error_info = f"[DIFY] payload={payload} response text={response.text} status_code={response.status_code}"
             logger.warning(error_info)
+            print(f"\n======== DIFY WORKFLOW ERROR ========")
+            print(f"Status Code: {response.status_code}")
+            print(f"Response: {response.text}")
+            print(f"====================================\n")
             friendly_error_msg = self._handle_error_response(response.text, response.status_code)
             return None, friendly_error_msg
 
-        #  {
-        #      "log_id": "djflajgkldjgd",
-        #      "task_id": "9da23599-e713-473b-982c-4328d4f5c78a",
-        #      "data": {
-        #          "id": "fdlsjfjejkghjda",
-        #          "workflow_id": "fldjaslkfjlsda",
-        #          "status": "succeeded",
-        #          "outputs": {
-        #          "text": "Nice to meet you."
-        #          },
-        #          "error": null,
-        #          "elapsed_time": 0.875,
-        #          "total_tokens": 3562,
-        #          "total_steps": 8,
-        #          "created_at": 1705407629,
-        #          "finished_at": 1727807631
-        #      }
-        #  }
+        try:
+            rsp_data = response.json()
+        except Exception as e:
+            logger.error(f"[DIFY] Workflow response not JSON: {response.text}")
+            return None, "工作流返回数据异常"
 
-        rsp_data = response.json()
         if 'data' not in rsp_data or 'outputs' not in rsp_data['data'] or 'text' not in rsp_data['data']['outputs']:
             error_info = f"[DIFY] Unexpected response format: {rsp_data}"
             logger.warning(error_info)
@@ -395,16 +403,12 @@ class DifyBot(Bot):
             error_info = f"[DIFY] response text={response.text} status_code={response.status_code} when upload file"
             logger.warning(error_info)
             return None, error_info
-        # {
-        #     'id': 'f508165a-10dc-4256-a7be-480301e630e6',
-        #     'name': '0.png',
-        #     'size': 17023,
-        #     'extension': 'png',
-        #     'mime_type': 'image/png',
-        #     'created_by': '0d501495-cfd4-4dd4-a78b-a15ed4ed77d1',
-        #     'created_at': 1722781568
-        # }
-        file_upload_data = response.json()
+        
+        try:
+            file_upload_data = response.json()
+        except:
+             return None, "File upload response not JSON"
+
         logger.debug("[DIFY] upload file {}".format(file_upload_data))
         return [
             {
@@ -454,7 +458,7 @@ class DifyBot(Bot):
             logger.warning("Received an empty SSE event.")
             return None
 
-    # TODO: 异步返回events
+    # 【关键修改2】增加对 workflow_finished 的解析，并在最后强制打包
     def _handle_sse_response(self, response: requests.Response):
         events = []
         for line in response.iter_lines():
@@ -467,37 +471,67 @@ class DifyBot(Bot):
         merged_message = []
         accumulated_agent_message = ''
         conversation_id = None
+        
         for event in events:
             event_name = event['event']
+            
+            # 1. 普通消息 / Agent消息
             if event_name == 'agent_message' or event_name == 'message':
                 accumulated_agent_message += event['answer']
                 logger.debug("[DIFY] accumulated_agent_message: {}".format(accumulated_agent_message))
-                # 保存conversation_id
                 if not conversation_id:
                     conversation_id = event['conversation_id']
+            
+            # 2. Agent 思考过程
             elif event_name == 'agent_thought':
                 self._append_agent_message(accumulated_agent_message, merged_message)
                 accumulated_agent_message = ''
                 logger.debug("[DIFY] agent_thought: {}".format(event))
+            
+            # 3. 文件消息
             elif event_name == 'message_file':
                 self._append_agent_message(accumulated_agent_message, merged_message)
                 accumulated_agent_message = ''
                 self._append_message_file(event, merged_message)
-            elif event_name == 'message_replace':
-                # TODO: handle message_replace
+                
+            # 4. 【新增】 Chatflow 工作流结束事件
+            elif event_name == 'workflow_finished':
+                logger.debug(f"[DIFY] workflow_finished: {event}")
+                if 'outputs' in event['data']:
+                    outputs = event['data']['outputs']
+                    # 尝试多种可能的字段名
+                    final_text = outputs.get('answer') or outputs.get('result') or outputs.get('text') or str(outputs)
+                    
+                    # 【核心修复】：只有当之前没有收到流式消息时，才使用 workflow_finished 的结果
+                    if not accumulated_agent_message:
+                        accumulated_agent_message = final_text
+                    
+                if not conversation_id:
+                    conversation_id = event['conversation_id']
+            
+            # 5. 消息结束
+            elif event_name == 'message_end':
+                self._append_agent_message(accumulated_agent_message, merged_message)
+                logger.debug("[DIFY] message_end usage: {}".format(event.get('metadata', {}).get('usage')))
+                break
+            
+            # 忽略其他不重要的中间事件
+            elif event_name in ['workflow_started', 'node_started', 'node_finished', 'message_replace', 'ping']:
                 pass
+                
             elif event_name == 'error':
                 logger.error("[DIFY] error: {}".format(event))
                 raise Exception(event)
-            elif event_name == 'message_end':
-                self._append_agent_message(accumulated_agent_message, merged_message)
-                logger.debug("[DIFY] message_end usage: {}".format(event['metadata']['usage']))
-                break
             else:
                 logger.warning("[DIFY] unknown event: {}".format(event))
 
+        # === 【关键修复】循环结束后，强制把最后积攒的消息打包 ===
+        if accumulated_agent_message:
+            self._append_agent_message(accumulated_agent_message, merged_message)
+        # ========================================================
+
         if not conversation_id:
-            raise Exception("conversation_id not found")
+             conversation_id = "workflow_session_id_placeholder"
 
         return merged_message, conversation_id
 
@@ -520,13 +554,22 @@ class DifyBot(Bot):
         """处理错误响应并提供用户指导"""
         try:
             friendly_error_msg = UNKNOWN_ERROR_MSG
-            error_data = json.loads(response_text)
+            try:
+                error_data = json.loads(response_text)
+            except:
+                # 如果错误信息都不是json，直接返回状态码
+                return f"[DIFY] 请求失败，状态码 {status_code}，请检查API地址配置。"
+
             if status_code == 400 and "agent chat app does not support blocking mode" in error_data.get("message", "").lower():
                 friendly_error_msg = "[DIFY] 请把config.json中的dify_app_type修改为agent再重启机器人尝试"
                 print_red(friendly_error_msg)
-            elif status_code == 401 and error_data.get("code").lower() == "unauthorized":
+            elif status_code == 401 and error_data.get("code", "").lower() == "unauthorized":
                 friendly_error_msg = "[DIFY] apikey无效, 请检查config.json中的dify_api_key或dify_api_base是否正确"
                 print_red(friendly_error_msg)
+            elif status_code == 404:
+                friendly_error_msg = f"[DIFY] 404 Not Found: 请检查 dify_api_base 配置。当前尝试访问: {self.api_base}"
+                print_red(friendly_error_msg)
+            
             return friendly_error_msg
         except Exception as e:
             logger.error(f"Failed to handle error response, response_text: {response_text} error: {e}")
