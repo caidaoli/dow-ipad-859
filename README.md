@@ -39,6 +39,12 @@
 (想要使用以上切换指令需同步更新godcmd插件目录下的available_models.json文件)
 ```
 - **更新示例**
+- 2026-03-08
+ <img width="1106" height="860" alt="ScreenShot_2026-03-08_011255_791" src="https://github.com/user-attachments/assets/7e48fb7b-63c4-47aa-bd0b-8cb4d17df337" />
+ <img width="1104" height="794" alt="ScreenShot_2026-03-08_011321_887" src="https://github.com/user-attachments/assets/b3adc74e-7a05-4421-bc16-c3b2f8dfb093" />
+ <img width="1005" height="1086" alt="微信图片_2026-03-08_011526_900" src="https://github.com/user-attachments/assets/a752075a-f1be-4cd1-9209-7d7aa6c2a638" />
+ <img width="1025" height="1096" alt="微信图片_2026-03-08_011437_812" src="https://github.com/user-attachments/assets/23734385-c445-469b-bff9-5b7e04012424" />
+
 - 2025-08-23
 <img width="440" height="320" alt="04cb981c-1a0f-42c9-9061-c09fa3072005" src="https://github.com/user-attachments/assets/a4c3b21e-34c7-437a-9180-0b7fc3725bbc" />
 <img width="384" height="320" alt="image" src="https://github.com/user-attachments/assets/4f4f4de2-40f2-4083-9848-ec1e045d20dc" />
