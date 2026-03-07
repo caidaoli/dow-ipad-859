@@ -21,18 +21,24 @@ def create_bot(bot_type):
         
     # 如果模型是 SiliconFlow 系列模型，使用 SiliconFlowBot
     if model in [
-        const.DEEPSEEK_V3,
-        const.DEEPSEEK_R1,
-        const.GLM_4_9B,
-        const.GLM_Z1_9B,
-        const.GLM_Z1_R_32B,
-        const.MiniMax_M1_80K,
-        const.Hunyuan_A13B,
-        const.ERNIE_45_300B
+        const.SF_DEEPSEEK_V32,
+        const.SF_QWEN3,
+        const.SF_KIMI_K2,
+        const.SF_GLM_46
     ]:
         from bot.siliconflow.siliconflow_bot import SiliconFlowBot
         return SiliconFlowBot()
     
+    # 如果模型是 LongCat 系列模型，使用 LongCatBot
+    if model in [
+        const.LONGCAT_FLASH_LITE,
+        const.LONGCAT_FLASH_CHAT,
+        const.LONGCAT_THINKING,
+        const.LONGCAT_THINKING_2601
+    ]:
+        from bot.longcat.longcat_bot import LongCatBot
+        return LongCatBot()    
+
     # 如果模型是 DeepSeek 系列模型，使用 DeepSeekBot
     if model in [
         const.DEEPSEEK_CHAT,
@@ -43,30 +49,21 @@ def create_bot(bot_type):
         
     # 如果模型是 ZhipuAI 系列模型，使用 ZhipuAIBot
     if model in [
-        const.GLM_4_FLASH,
+        const.GLM_47_FLASH,
         const.GLM_45_FLASH,
-        const.GLM_4_AIR,
-        const.GLM_4_AIR_0414,
-        const.GLM_4_PLUS,
-        const.GLM_Z1_FLASH,
-        const.GLM_Z1_AIR
+        const.GLM_46V_FLASH
     ]:
         from bot.zhipuai.zhipuai_bot import ZhipuAIBot
         return ZhipuAIBot()
 
     # 如果模型是 Dashscope 系列模型，使用 DashscopeBot
     if model in [
-        const.QWEN_PLUS,
-        const.QWEN_MAX,
-        const.QWEN_TURBO,
-        const.QWEN3_THINKING_2507,
-        const.QWEN3_INSTRUCT_2507,
-        const.QWEN3_235B,
-        const.QWEN3_32B,
-        const.QWEN3_14B,
-        const.QWQ_PLUS,
-        const.QWEN_CHAT,
-        const.QWEN_R1
+        const.QWEN_35_PLUS,
+        const.QWEN_35_FLASH,
+        const.QWEN_DS,
+        const.QWEN_GLM,
+        const.QWEN_K25,
+        const.QWEN_M25
     ]:
         from bot.dashscope.dashscope_bot import DashscopeBot
         return DashscopeBot()
