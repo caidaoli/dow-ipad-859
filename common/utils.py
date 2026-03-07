@@ -216,3 +216,39 @@ def remove_markdown_symbol(text: str) -> str:
     
     # 重新组合文本
     return '\n'.join(processed_lines).strip()
+
+
+def expand_path(path: str) -> str:
+    """
+    Expand user path with proper Windows support.
+    
+    On Windows, os.path.expanduser('~') may not work properly in some shells (like PowerShell).
+    This function provides a more robust path expansion.
+    
+    Args:
+        path: Path string that may contain ~
+        
+    Returns:
+        Expanded absolute path
+    """
+    if not path:
+        return path
+    
+    # Try standard expansion first
+    expanded = os.path.expanduser(path)
+    
+    # If expansion didn't work (path still starts with ~), use HOME or USERPROFILE
+    if expanded.startswith('~'):
+        import platform
+        if platform.system() == 'Windows':
+            # On Windows, try USERPROFILE first, then HOME
+            home = os.environ.get('USERPROFILE') or os.environ.get('HOME')
+        else:
+            # On Unix-like systems, use HOME
+            home = os.environ.get('HOME')
+        
+        if home:
+            expanded = expanded.replace('~', home, 1)
+    
+    # Convert to absolute path
+    return os.path.abspath(expanded)
