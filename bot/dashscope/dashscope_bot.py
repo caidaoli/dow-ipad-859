@@ -18,44 +18,38 @@ dashscope_models = {}
 
 # 基础模型 - 尝试使用 Models 类属性
 try:
-    dashscope_models["qwen-plus"] = dashscope.Generation.Models.qwen_plus
+    dashscope_models["qwen3.5-flash"] = dashscope.Generation.Models.qwen_flash
 except AttributeError:
-    dashscope_models["qwen-plus"] = "qwen-plus"
-    logger.warning("使用字符串替代 Models.qwen_plus")
+    dashscope_models["qwen3.5-flash"] = "qwen3.5-flash"
+    logger.warning("使用字符串替代 Models.qwen_flash")
 
 try:
-    dashscope_models["qwen-max"] = dashscope.Generation.Models.qwen_max
+    dashscope_models["qwen3.5-plus"] = dashscope.Generation.Models.qwen_plus
 except AttributeError:
-    dashscope_models["qwen-max"] = "qwen-max"
-    logger.warning("使用字符串替代 Models.qwen_max")
+    dashscope_models["qwen3.5-plus"] = "qwen3.5-plus"
+    logger.warning("使用字符串替代 Models.qwen3_max")
 
 # 新模型 - 直接使用字符串
-dashscope_models["qwq-plus"] = "qwq-plus"
-logger.info("已添加 qwq-plus 模型（使用字符串模型名）")
+dashscope_models["qwen3.5-flash"] = "qwen3.5-flash"
+logger.info("已添加 qwen3.5-flash 模型（使用字符串模型名）")
 
-dashscope_models["qwen-turbo-2025-04-28"] = "qwen-turbo-2025-04-28"
-logger.info("已添加 qwen-turbo-2025-04-28 模型（使用字符串模型名）")
+dashscope_models["qwen3.5-plus"] = "qwen3.5-plus"
+logger.info("已添加 qwen3.5-plus 模型（使用字符串模型名）")
 
-dashscope_models["qwen3-235b-a22b"] = "qwen3-235b-a22b"
-logger.info("已添加 qwen3-235b-a22b 模型（使用字符串模型名）")
+dashscope_models["glm-5"] = "glm-5"
+logger.info("已添加 glm-5 模型（使用字符串模型名）")
 
-dashscope_models["qwen3-32b"] = "qwen3-32b"
-logger.info("已添加 qwen3-32b 模型（使用字符串模型名）")
+dashscope_models["kimi-k2.5"] = "kimi-k2.5"
+logger.info("已添加 kimi-k2.5 模型（使用字符串模型名）")
 
-dashscope_models["qwen3-14b"] = "qwen3-14b"
-logger.info("已添加 qwen3-14b 模型（使用字符串模型名）")
-
-dashscope_models["deepseek-v3"] = "deepseek-v3"
-logger.info("已添加 deepseek-v3 模型（使用字符串模型名）")
-
-dashscope_models["deepseek-r1"] = "deepseek-r1"
-logger.info("已添加 deepseek-r1 模型（使用字符串模型名）")
+dashscope_models["MiniMax-M2.5"] = "MiniMax-M2.5"
+logger.info("已添加 MiniMax-M2.5 模型（使用字符串模型名）")
 
 # 定义需要使用OpenAI兼容模式的模型
-openai_compatible_models = ["qwq-plus", "deepseek-r1", "qwen-turbo-2025-04-28", "qwen3-235b-a22b", "qwen3-32b", "qwen3-14b"]
+openai_compatible_models = ["qwen3.5-flash", "qwen3.5-plus", "glm-5", "kimi-k2.5", "MiniMax-M2.5"]
 
 # 定义需要流式模式的模型
-stream_required_models = ["qwq-plus", "deepseek-r1", "qwen-turbo-2025-04-28", "qwen3-235b-a22b", "qwen3-32b", "qwen3-14b"]
+stream_required_models = ["qwen3.5-flash", "qwen3.5-plus", "glm-5", "kimi-k2.5", "MiniMax-M2.5"]
 
 # Dashscope对话模型API
 class DashscopeBot(Bot):
