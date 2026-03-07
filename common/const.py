@@ -19,6 +19,8 @@ DIFY = "dify"
 SILICONFLOW = "siliconflow"  # 确保这个值与 config.json 中的 bot_type 一致
 DEEPSEEK = "deepseek"  # 添加DeepSeek类型
 MODELSCOPE = "modelscope"  # 添加ModelScope类型
+DOUBAO = "doubao"  # 字节跳动豆包
+LONGCAT = "longcat"  # LongCat API
 
 # openAI models
 O1 = "o1"
@@ -28,48 +30,55 @@ GPT_41_MINI = "gpt-4.1-mini"
 GPT_41_NANO = "gpt-4.1-nano"
 GPT_4O_MINI = "gpt-4o-mini"
 GPT_4O_MINI_SEARCH = "gpt-4o-mini-search-preview"
+GROK_4 = "grok-4"
+GROK_41 = "grok-4.1"
+GROK_42 = "grok-4.20-beta"
+LINKAI_35 = "linkai-3.5"
 
 WHISPER_1 = "whisper-1"
 TTS_1 = "tts-1"
 TTS_1_HD = "tts-1-hd"
 
+# longcat models
+LONGCAT_THINKING_2601 = "LongCat-Flash-Thinking-2601"
+LONGCAT_THINKING = "LongCat-Flash-Thinking"
+LONGCAT_FLASH_CHAT = "LongCat-Flash-Chat"
+LONGCAT_FLASH_LITE = "LongCat-Flash-Lite"
+
 # dashscope models
-QWEN_PLUS = "qwen-plus"
-QWEN_MAX = "qwen-max"
-QWEN_FLASH = "qwen-flash"
-QWEN_TURBO = "qwen-turbo-2025-04-28"
-QWEN3_THINKING_2507 = "qwen3-235b-a22b-thinking-2507"
-QWEN3_INSTRUCT_2507 = "qwen3-235b-a22b-instruct-2507"
-QWEN3_32B = "qwen3-30b-a3b-instruct-2507"
-QWEN3_14B = "qwen3-14b"
-QWEN_CHAT = "deepseek-v3"
-QWEN_R1 = "deepseek-r1"
-QWEN_K2 = "Moonshot-Kimi-K2-Instruct"
+QWEN_35_PLUS = "qwen3.5-plus"
+QWEN_35_PLUS_2602 = "qwen3.5-plus-2026-02-15"
+QWEN_35_FLASH = "qwen3.5-flash"
+QWEN_35_FLASH_2602 = "qwen3.5-flash-2026-02-23"
+QWEN_35_397B = "qwen3.5-397b-a17b"
+QWEN_35_27B = "qwen3.5-27b"
+QWEN_DS = "deepseek-v3.2"
+QWEN_GLM = "glm-5"
+QWEN_K25 = "kimi-k2.5"
+QWEN_M25 = "MiniMax-M2.5"
 
 # zhipuai models
-GLM_4_FLASH = "glm-4-flash-250414"
+GLM_47_FLASH = "glm-4.7-flash"
 GLM_45_FLASH = "glm-4.5-flash"
-GLM_4_AIR = "glm-4-air"
-GLM_4_AIR_0414 = "glm-4-air-250414"
-GLM_4_PLUS = "glm-4-plus"
-GLM_Z1_FLASH = "glm-z1-flash"
-GLM_Z1_AIR = "glm-z1-air"
+GLM_46V_FLASH = "glm-4.6v-flash"
+GLM_4V_FLASH = "glm-4v-flash"
+GLM_41V_FLASH = "glm-4.1v-thinking-flash"
 
 # siliconflow models
-DEEPSEEK_V3 = "deepseek-ai/DeepSeek-V3"
-DEEPSEEK_R1 = "deepseek-ai/DeepSeek-R1"
-GLM_4_9B = "THUDM/GLM-4-9B-0414"
-GLM_Z1_9B = "THUDM/GLM-Z1-9B-0414"
-GLM_Z1_R_32B = "THUDM/GLM-Z1-Rumination-32B-0414"
-MiniMax_M1_80K = "MiniMaxAI/MiniMax-M1-80k"
-Hunyuan_A13B = "tencent/Hunyuan-A13B-Instruct"
-ERNIE_45_300B = "baidu/ERNIE-4.5-300B-A47B"
+SF_DEEPSEEK_V32 = "deepseek-ai/DeepSeek-V3.2"
+SF_MiniMax_M21 = "Pro/MiniMaxAI/MiniMax-M2.1"
+SF_KIMI_K2 = "moonshotai/Kimi-K2-Instruct-0905"
+SF_GLM_46 = "zai-org/GLM-4.6"
+SF_QWEN3 = "Qwen/Qwen3-235B-A22B-Instruct-2507"
+SF_STEP35 = "stepfun-ai/Step-3.5-Flash"
+SF_LING_FLASH_2 = "inclusionAI/Ling-flash-2.0"
 
 # modelscope models
-QWEN3_235B = "Qwen/Qwen3-235B-A22B-Instruct-2507"
-KIMI_K2 = "moonshotai/Kimi-K2-Instruct"
-DS_V31 = "deepseek-ai/DeepSeek-V3.1"
-GLM_45 = "ZhipuAI/GLM-4.5"
+QWEN35_397B = "Qwen/Qwen3.5-397B-A17B"
+KIMI_K25 = "moonshotai/Kimi-K2.5"
+MiniMax_M25 = "MiniMax/MiniMax-M2.5"
+DS_V32 = "deepseek-ai/DeepSeek-V3.2"
+GLM_5 = "ZhipuAI/GLM-5"
 
 # deepseek models
 DEEPSEEK_CHAT = "deepseek-chat"
@@ -86,15 +95,17 @@ DIFY_CHATBOT = "chatbot"
 DIFY_AGENT = "agent"
 DIFY_WORKFLOW = "workflow"
 
-MODEL_LIST = [OPEN_AI, O1, O1_MINI, GPT_41, GPT_41_MINI, GPT_41_NANO, GPT_4O_MINI, GPT_4O_MINI_SEARCH,
-              QWEN_DASHSCOPE, QWEN_PLUS, QWEN_MAX, QWEN_TURBO, QWEN3_THINKING_2507, QWEN3_INSTRUCT_2507, QWEN3_32B, QWEN3_14B, QWEN_FLASH, QWEN_CHAT, QWEN_R1, QWEN_K2,
-              ZHIPU_AI, GLM_4_FLASH, GLM_45_FLASH, GLM_4_AIR, GLM_4_AIR_0414, GLM_4_PLUS, GLM_Z1_FLASH, GLM_Z1_AIR, 
-              SILICONFLOW, DEEPSEEK_V3, DEEPSEEK_R1, GLM_4_9B, GLM_Z1_9B, GLM_Z1_R_32B, MiniMax_M1_80K, Hunyuan_A13B, ERNIE_45_300B,
-              MODELSCOPE, QWEN3_235B, KIMI_K2, DS_V31, GLM_45,
+MODEL_LIST = [OPEN_AI, O1, O1_MINI, GPT_41, GPT_41_MINI, GPT_41_NANO, GPT_4O_MINI, GPT_4O_MINI_SEARCH, GROK_4, GROK_41, GROK_42, LINKAI_35, 
+              LONGCAT_THINKING_2601, LONGCAT_THINKING, LONGCAT_FLASH_CHAT, LONGCAT_FLASH_LITE, 
+              QWEN_DASHSCOPE, QWEN_35_PLUS, QWEN_35_PLUS_2602, QWEN_35_FLASH, QWEN_35_FLASH_2602, QWEN_35_397B, QWEN_35_27B, QWEN_DS, QWEN_GLM, QWEN_K25, QWEN_M25, 
+              ZHIPU_AI, GLM_47_FLASH, GLM_45_FLASH, GLM_46V_FLASH, GLM_4V_FLASH, GLM_41V_FLASH,
+              SILICONFLOW, SF_DEEPSEEK_V32, SF_MiniMax_M21, SF_KIMI_K2, SF_GLM_46, SF_QWEN3, SF_STEP35, SF_LING_FLASH_2, 
+              MODELSCOPE, QWEN35_397B, KIMI_K25, MiniMax_M25, DS_V32, GLM_5,
               COZE, QIANFAN, 
               DIFY, DIFY_CHATFLOW, DIFY_CHATBOT, DIFY_AGENT, DIFY_WORKFLOW,
               GEMINI, GEMINI_15_FLASH, GEMINI_15_PRO, GEMINI_20_FLASH_EXP,
               DEEPSEEK, DEEPSEEK_CHAT, DEEPSEEK_REASONER]
+              
 
 # channel
 FEISHU = "feishu"
