@@ -36,8 +36,6 @@ class Bridge(object):
                 self.btype["chat"] = const.XUNFEI
             if model_type == const.QWEN:
                 self.btype["chat"] = const.QWEN
-            if model_type and model_type.startswith("gemini"):
-                self.btype["chat"] = const.GEMINI
             if model_type in [const.DIFY, const.DIFY_CHATBOT, const.DIFY_AGENT, const.DIFY_CHATFLOW, const.DIFY_WORKFLOW]:
                 self.btype["chat"] = const.DIFY
             if model_type and model_type.startswith("glm"):
@@ -58,12 +56,16 @@ class Bridge(object):
                 self.btype["chat"] = const.MiniMax
 
             # Dashscope models
-            if model_type in [const.QWEN_35_PLUS, const.QWEN_35_FLASH, const.QWEN_DS, const.QWEN_GLM, const.QWEN_K25, 
-                            const.QWEN_M25]:
+            if model_type in [const.QWEN_35_PLUS, const.QWEN_35_PLUS_2602,
+                             const.QWEN_35_FLASH, const.QWEN_35_FLASH_2602,
+                             const.QWEN_35_397B, const.QWEN_35_27B,
+                             const.QWEN_DS, const.QWEN_GLM, const.QWEN_K25,
+                             const.QWEN_M25]:
                 self.btype["chat"] = const.QWEN_DASHSCOPE
 
             # Siliconflow models
-            if model_type in [const.SF_DEEPSEEK_V32, const.SF_QWEN3, const.SF_KIMI_K2, const.SF_GLM_46]:
+            if model_type in [const.SF_DEEPSEEK_V32, const.SF_QWEN3, const.SF_KIMI_K2, const.SF_GLM_46,
+                             const.SF_STEP35, const.SF_LING_FLASH_2, const.SF_MiniMax_M21]:
                 self.btype["chat"] = const.SILICONFLOW
 
             # Deepseek models
@@ -75,6 +77,23 @@ class Bridge(object):
             if model_type in [const.LONGCAT_FLASH_LITE, const.LONGCAT_FLASH_CHAT, const.LONGCAT_THINKING, const.LONGCAT_THINKING_2601]:
                 self.btype["chat"] = const.LONGCAT
                 logger.info(f"[Bridge] Matched LongCat model: {model_type} -> {const.LONGCAT}")
+
+            # OpenAI GPT-5 series models -> OPEN_AI -> OpenAIBot
+            if model_type in [const.GPT_51, const.GPT_52, const.GPT_54, const.GPT_OSS_120B]:
+                self.btype["chat"] = const.OPEN_AI
+                logger.info(f"[Bridge] Matched OpenAI model: {model_type} -> {const.OPEN_AI}")
+
+            # Grok models -> OPEN_AI (compatible API)
+            if model_type in [const.GROK_41_FAST, const.GROK_41, const.GROK_42]:
+                self.btype["chat"] = const.OPEN_AI
+                logger.info(f"[Bridge] Matched Grok model: {model_type} -> {const.OPEN_AI}")
+
+            # Gemini models
+#           if model_type in [const.GEMINI_15_FLASH, const.GEMINI_15_PRO, const.GEMINI_20_FLASH_EXP] or \
+#              (model_type and model_type.startswith("gemini")):
+#               self.btype["chat"] = const.GEMINI
+#               logger.info(f"[Bridge] Matched Gemini model: {model_type} -> {const.GEMINI}")
+
 
             logger.info(f"[Bridge] Final bot type: {self.btype['chat']}")
 
