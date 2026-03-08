@@ -38,63 +38,79 @@ def fetch_sina_hot(count=10):
         return f"Error fetching Sina news: {str(e)}"
 
 def search_news(query, count=5):
-    """Search news using Sina search endpoint or 36Kr as fallback."""
-    # Sina Search Interface
-    url = f"https://search.sina.com.cn/search?q={query}&c=news&size={count}"
+    """Search news by filtering Sina Roll API results by keyword (stable JSON API, no scraping).
+    
+    原来的实现依赖新浪搜索页面的 CSS 选择器 (.box-result) 和 36Kr JS 渲染页面，
+    两者均已失效。现改为从新浪 Roll API 拉取大量新闻后在本地做关键词过滤。
+    """
+    fetch_count = max(count * 6, 60)
+    url = f"https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2509&num={fetch_count}"
     try:
-        from bs4 import BeautifulSoup
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
         r = requests.get(url, headers=headers, timeout=10)
-        r.encoding = 'utf-8' # Sina uses utf-8 or gbk, usually utf-8 for search
-        
-        soup = BeautifulSoup(r.text, 'html.parser')
-        res_list = soup.select('.box-result')
-        
-        if not res_list:
-            # Try 36Kr search as fallback for tech queries
-            return search_36kr(query, count)
-            
-        output = [f"News search results for '{query}':"]
-        for i, item in enumerate(res_list, 1):
-            title_node = item.select_one('h2 a')
-            if not title_node: continue
-            title = title_node.get_text(strip=True)
-            link = title_node.get('href')
-            time_node = item.select_one('.fgray_time')
-            ftime = time_node.get_text(strip=True) if time_node else ""
-            output.append(f"{i}. {title}\n   [{ftime}] URL: {link}")
-            
+        data = r.json()
+        items = data.get('result', {}).get('data', [])
+
+        if not items:
+            return f"No news found for '{query}'."
+
+        # Split query into individual keywords for flexible matching
+        keywords = [kw.strip() for kw in query.replace(',', ' ').split() if kw.strip()]
+
+        matched = []
+        for item in items:
+            title = item.get('title', '')
+            intro = item.get('intro', '') or item.get('summary', '') or ''
+            text = title + intro
+            # Match if ANY keyword appears in the title+intro
+            if any(kw in text for kw in keywords):
+                link = item.get('url', '')
+                if link.startswith('//'): link = 'https:' + link
+                ctime = item.get('createtime', '')
+                matched.append((title, ctime, link))
+            if len(matched) >= count:
+                break
+
+        if not matched:
+            # Fallback: return hot news with a note
+            return _fallback_hot_news(query, count)
+
+        output = [f"📰 '{query}' 相关新闻搜索结果："]
+        for i, (title, ctime, link) in enumerate(matched, 1):
+            output.append(f"{i}. {title}\n   [{ctime}] URL: {link}")
         return "\n\n".join(output)
+
     except Exception as e:
         return f"Error searching news: {str(e)}"
 
-def search_36kr(query, count=5):
-    """Fallback search via 36Kr."""
-    url = f"https://36kr.com/search/articles/{query}"
+
+def _fallback_hot_news(query, count=5):
+    """Fallback: return top hot news with a note that specific query has no match."""
+    url = f"https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2509&num={count}"
     try:
-        from bs4 import BeautifulSoup
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
         r = requests.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        
-        # 36Kr usually renders via JS, but we can try to find simple links or fallback to Bocha
-        # Since 36Kr is hard to scrape with requests sometimes, let's just return what we find
-        titles = soup.select('.kr-flow-article-title')
-        if not titles:
+        data = r.json()
+        items = data.get('result', {}).get('data', [])
+
+        if not items:
             return f"No news found for '{query}'. Please try using 'search_web' tool if available."
-            
-        output = [f"36Kr news results for '{query}':"]
-        for i, item in enumerate(titles[:count], 1):
-            title = item.get_text(strip=True)
-            link = "https://36kr.com" + item.get('href') if item.get('href') else ""
-            output.append(f"{i}. {title}\n   URL: {link}")
+
+        output = [f"未找到精确匹配 '{query}' 的新闻，以下是当前热点新闻供参考："]
+        for i, item in enumerate(items[:count], 1):
+            title = item.get('title', '')
+            link = item.get('url', '')
+            if link.startswith('//'): link = 'https:' + link
+            ctime = item.get('createtime', '')
+            output.append(f"{i}. {title}\n   [{ctime}] URL: {link}")
         return "\n\n".join(output)
     except Exception as e:
-        return f"Error searching 36Kr: {str(e)}"
+        return f"No news found for '{query}'. Please try using 'search_web' tool if available."
+
 
 def main():
     parser = argparse.ArgumentParser(description="Multi-source News Tool")
