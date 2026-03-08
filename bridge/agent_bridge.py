@@ -685,7 +685,7 @@ class AgentLLMModel(LLMModel):
 
     def __init__(self, bridge, bot_type: str = "chat"):
         from config import conf
-        super().__init__(model=conf().get("model", const.GPT_41))
+        super().__init__(model=conf().get("model", const.GPT_51))
         self.bridge = bridge
         self.bot_type = bot_type
         self._bot = None
@@ -694,7 +694,7 @@ class AgentLLMModel(LLMModel):
     @property
     def model(self):
         from config import conf
-        return conf().get("model", const.GPT_41)
+        return conf().get("model", const.GPT_51)
 
     @model.setter
     def model(self, value):
@@ -949,6 +949,29 @@ class AgentBridge:
             # Extract session_id from context for user isolation
             if context:
                 session_id = context.kwargs.get("session_id") or context.get("session_id")
+
+            # ── 引用图片注入 ─────────────────────────────────────────────────
+            # 当用户引用/回复一张图片并提问时，wx859_channel 会在 msg 对象上设置：
+            #   msg.is_processed_image_quote = True
+            #   msg.referenced_image_path    = "/root/.../xxx.jpg"
+            # 但这个路径从未进入 Agent 的 query，导致 Agent 看不到图片，无法触发 image-vision skill。
+            # 此处将路径追加到 query，格式供 SKILL.md 描述匹配识别。
+            if context:
+                try:
+                    msg_obj = context.kwargs.get("msg")
+                    if msg_obj and \
+                       getattr(msg_obj, "is_processed_image_quote", False) and \
+                       getattr(msg_obj, "referenced_image_path", None):
+                        img_path = msg_obj.referenced_image_path
+                        if img_path not in query:
+                            query = f"{query}\n[图片路径: {img_path}]"
+                            logger.info(
+                                f"[AgentBridge] Injected referenced_image_path into query: {img_path}"
+                            )
+                except Exception as _e:
+                    logger.warning(f"[AgentBridge] Failed to inject referenced_image_path: {_e}")
+            # ────────────────────────────────────────────────────────────────
+
             
             # Get agent for this session (will auto-initialize if needed)
             agent = self.get_agent(session_id=session_id)
