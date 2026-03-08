@@ -601,8 +601,8 @@ class Agent:
 
         
         context_needed_keywords = conf().get("agent_context_needed_keywords", [
-            "然后", "接下来", "继续", "刚才", "上面",
-            "他/她/它", "你说的", "你的意思是", "对吧", "是不是"
+            "接下来", "继续", "刚才", "上面",
+            "你说的", "你的意思是", "对吧", "是不是"
         ])
         
         msg_lower = user_message.lower()
