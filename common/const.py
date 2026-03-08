@@ -23,14 +23,13 @@ DOUBAO = "doubao"  # 字节跳动豆包
 LONGCAT = "longcat"  # LongCat API
 
 # openAI models
-O1 = "o1"
-O1_MINI = "o1-mini"
-GPT_41 = "gpt-4.1"
-GPT_41_MINI = "gpt-4.1-mini"
-GPT_41_NANO = "gpt-4.1-nano"
-GPT_4O_MINI = "gpt-4o-mini"
-GPT_4O_MINI_SEARCH = "gpt-4o-mini-search-preview"
-GROK_4 = "grok-4"
+GPT_OSS_120B = "gpt-oss-120b"
+GPT_51 = "gpt-5.1"
+GPT_52 = "gpt-5.2"
+GPT_54 = "gpt-5.4"
+GEMINI_3_FLASH = "gemini-3-flash-preview" 
+GEMINI_31_FLASH_LITE = "gemini-3.1-flash-lite-preview"
+GROK_41_FAST = "grok-4-1-fast-reasoning"
 GROK_41 = "grok-4.1"
 GROK_42 = "grok-4.20-beta"
 LINKAI_35 = "linkai-3.5"
@@ -95,7 +94,7 @@ DIFY_CHATBOT = "chatbot"
 DIFY_AGENT = "agent"
 DIFY_WORKFLOW = "workflow"
 
-MODEL_LIST = [OPEN_AI, O1, O1_MINI, GPT_41, GPT_41_MINI, GPT_41_NANO, GPT_4O_MINI, GPT_4O_MINI_SEARCH, GROK_4, GROK_41, GROK_42, LINKAI_35, 
+MODEL_LIST = [OPEN_AI, GPT_OSS_120B, GPT_51, GPT_52, GPT_54, GEMINI_3_FLASH, GEMINI_31_FLASH_LITE, GROK_41_FAST, GROK_41, GROK_42, LINKAI_35, 
               LONGCAT_THINKING_2601, LONGCAT_THINKING, LONGCAT_FLASH_CHAT, LONGCAT_FLASH_LITE, 
               QWEN_DASHSCOPE, QWEN_35_PLUS, QWEN_35_PLUS_2602, QWEN_35_FLASH, QWEN_35_FLASH_2602, QWEN_35_397B, QWEN_35_27B, QWEN_DS, QWEN_GLM, QWEN_K25, QWEN_M25, 
               ZHIPU_AI, GLM_47_FLASH, GLM_45_FLASH, GLM_46V_FLASH, GLM_4V_FLASH, GLM_41V_FLASH,
