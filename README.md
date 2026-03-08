@@ -111,9 +111,9 @@
   "single_chat_prefix": [""],                    # 选填
   "single_chat_reply_prefix": "",                # 选填
   "temperature": 0.5,
-  "zhipu_ai_api_base": "https://open.bigmodel.cn/api/paas/v4",
-  "zhipu_ai_api_key": "",                        # 选填
-  "zhipuai_model": "glm-4-flash-250414"  
+  "open_ai_api_base": "https://api.openai.com/v1",
+  "open_ai_api_key": "",                         # 选填
+  "open_ai_model": "gpt-5.4"  
 }
 ```
 
