@@ -148,6 +148,25 @@ ADMIN_COMMANDS = {
         "alias": ["debug", "调试模式", "DEBUG"],
         "desc": "开启机器调试日志",
     },
+    "agent": {
+        "alias": ["agent", "智能体模式", "AGENT"],
+        "desc": "开启/关闭全局Agent模式",
+    },
+    "clean_memory": {
+        "alias": ["清除记忆"],
+        "args": ["[数量]"],
+        "desc": "清除远期记忆(默认20条)",
+    },
+    "clean_long_memory": {
+        "alias": ["清除远期记忆"],
+        "args": ["[数量]"],
+        "desc": "清除指定数量的远期记忆",
+    },
+    "clean_short_memory": {
+        "alias": ["清除近期记忆"],
+        "args": ["[数量]"],
+        "desc": "清除指定数量的近期记忆",
+    },
 }
 
 def generate_temporary_password(length=12):
@@ -574,6 +593,15 @@ class Godcmd(Plugin):
                         else:
                             logger.setLevel(logging.DEBUG)
                             ok, result = True, "DEBUG模式已开启"
+                    elif canonical_admin_cmd == "agent":
+                        # 切换全局Agent模式开关
+                        current_agent_status = conf().get("agent", False)
+                        new_agent_status = not current_agent_status
+                        conf()["agent"] = new_agent_status
+                        if new_agent_status:
+                            ok, result = True, "Agent模式已开启"
+                        else:
+                            ok, result = True, "Agent模式已关闭"
                     elif canonical_admin_cmd == "plist":
                         plugins = PluginManager().list_plugins()
                         ok = True
@@ -640,6 +668,31 @@ class Godcmd(Plugin):
                             ok, result = False, "请提供插件名"
                         else:
                             ok, result = PluginManager().update_plugin(args[0])
+                    elif canonical_admin_cmd == "clean_memory" or canonical_admin_cmd == "clean_long_memory":
+                        num = 20
+                        if len(args) > 0:
+                            try:
+                                num = int(args[0])
+                            except:
+                                pass
+                        from agent.memory.storage import MemoryStorage
+                        from agent.memory.config import get_default_memory_config
+                        db_path = get_default_memory_config().get_db_path()
+                        storage = MemoryStorage(db_path)
+                        count = storage.delete_oldest_chunks(num)
+                        storage.close()
+                        ok, result = True, f"成功清除 {count} 条远期记忆"
+                    elif canonical_admin_cmd == "clean_short_memory":
+                        num = 20
+                        if len(args) > 0:
+                            try:
+                                num = int(args[0])
+                            except:
+                                pass
+                        from agent.memory.conversation_store import get_conversation_store
+                        store = get_conversation_store()
+                        count = store.delete_recent_messages(session_id, num)
+                        ok, result = True, f"成功清除 {count} 条近期记忆"
                     logger.debug("[Godcmd] admin command: %s by %s" % (canonical_admin_cmd, user))
                 else:
                     ok, result = False, "需要管理员权限才能执行该指令"
