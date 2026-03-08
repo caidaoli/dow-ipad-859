@@ -565,7 +565,25 @@ class Agent:
                 'turns': 0,   # 0 表示不引入任何历史上下文
                 'reason': '消息包含URL，视为独立任务，不引入历史上下文'
             }
-        
+
+        # 🔴 Fix #4: 实时查询/新闻搜索 — 此类任务带时效性，历史上下文只会干扰判断
+        # 匹配：时效性前缀 + 信息类关键词
+        _realtime_prefixes = [
+            '搜索一下', '查一下', '帮我搜', '帮我查', '搜一搜', '查一查',
+            '今日', '今天', '最新', '近期', '当前', '目前', '现在的',
+        ]
+        _realtime_topics = [
+            '新闻', '消息', '战况', '报道', '热搜', '热点', '资讯',
+            '局势', '市场', '行情', '天气预报',
+        ]
+        if (any(p in user_message for p in _realtime_prefixes) and
+                any(t in user_message for t in _realtime_topics)):
+            return {
+                'type': 'standalone',
+                'turns': 0,
+                'reason': '实时查询/新闻搜索任务，不引入历史上下文'
+            }
+
         # 获取配置
         simple_keywords = conf().get("agent_simple_keywords", [
             "你好", "hello", "hi", "在吗", "吃了吗", "天气", "几点了",
@@ -575,11 +593,12 @@ class Agent:
         
         full_context_keywords = conf().get("agent_full_context_keywords", [
             "之前", "上次", "上次我们", "之前你说的", "记得", "我之前",
-            "帮我看看", "查看", "读取", "搜索", "查找", "调试", "代码",
+            "帮我看看", "读取", "调试", "代码",
             "修改", "写一个", "创建", "生成", "执行", "运行", "安装",
             "总结", "分析", "对比", "翻译", "解释", "为什么", "怎么",
             "提示词", "人设", "prompt", "越狱", "管理员", "安全"
         ])
+
         
         context_needed_keywords = conf().get("agent_context_needed_keywords", [
             "然后", "接下来", "继续", "刚才", "上面",
