@@ -4452,7 +4452,21 @@ class WX859Channel(ChatChannel):
                         quoted_content_raw = refermsg.findtext("content")
                         if quoted_content_raw:
                             try:
-                                inner_xml_root = ET.fromstring(quoted_content_raw)
+                                # 修复：群成员转发的消息，content 可能含有 "昵称:\n" 或 "wxid_xxx:\n" 前缀
+                                # 例如：'xun900112:\n<?xml version="1.0"?><msg>...'
+                                # 需要剥离前缀后再解析，否则 ET.fromstring 会抛出 ParseError
+                                inner_xml_to_parse = quoted_content_raw
+                                _xml_start = -1
+                                for _prefix in ["<?xml", "<msg"]:
+                                    _idx = quoted_content_raw.find(_prefix)
+                                    if _idx > 0:  # >0 说明前面确实有前缀内容
+                                        _xml_start = _idx
+                                        break
+                                if _xml_start > 0:
+                                    inner_xml_to_parse = quoted_content_raw[_xml_start:]
+                                    _stripped_prefix = quoted_content_raw[:_xml_start].strip()
+                                    logger.debug(f"[{self.name}] Stripped sender prefix from refermsg content: '{_stripped_prefix}' in msg {cmsg.msg_id}")
+                                inner_xml_root = ET.fromstring(inner_xml_to_parse)
                                 inner_appmsg = inner_xml_root.find("appmsg")
                                 
                                 if inner_appmsg is not None:
