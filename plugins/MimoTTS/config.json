@@ -1,0 +1,39 @@
+{
+    "mimo_api_key": "",
+    "llm_api_key": "",
+    "voice": "mimo_default",
+    "model": "mimo-v2-tts",
+    "llm_model": "deepseek-ai/DeepSeek-V3.2",
+    "llm_api_base_url": "https://api.siliconflow.cn/v1",
+    "mimo_api_url": "https://api.xiaomimimo.com/v1/chat/completions",
+    "file_retention_days": 1,
+    "voice_cache_dir": "tmp/wx859_voice_cache",
+    "trigger_words": {
+        "read": "mm朗读",
+        "answer": "mm回答",
+        "sing": "mm唱歌",
+        "list_models": "mm音色列表",
+        "switch_model": "mm切换音色",
+        "enable_auto": "开启语音回复",
+        "disable_auto": "关闭语音回复"
+    },
+    "audio_format": "mp3",
+    "auto_reply_enabled": false,
+    "auto_reply_max_length": 500,
+    "auto_reply_style": "",
+    "system_prompt": "你是一个专业、友好的AI助手。请根据用户的问题提供准确、有帮助的回答。\\n要求：\\n1. 回答要准确专业\\n2. 语言要简洁易懂\\n3. 态度要友好\\n4. 适当使用标点符号提高可读性\\n5. 回答不超过50字\\n\\n请直接输出答案内容，确保回答准确、易懂。",
+    "voice_models": [
+        {
+            "name": "MiMo默认",
+            "voice": "mimo_default"
+        },
+        {
+            "name": "中文女声",
+            "voice": "default_zh"
+        },
+        {
+            "name": "英文女声",
+            "voice": "default_en"
+        }
+    ]
+}
